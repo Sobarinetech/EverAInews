@@ -27,8 +27,9 @@ def create_image_from_text(text, frame_num):
     # Wrap the text to fit within the image width
     wrapped_text = textwrap.fill(text, width=60)
     
-    # Positioning and drawing text in the center
-    w, h = draw.textsize(wrapped_text, font=font)
+    # Positioning and drawing text in the center using textbbox for size calculation
+    bbox = draw.textbbox((0, 0), wrapped_text, font=font)
+    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
     text_position = ((width - w) // 2, (height - h) // 2)
     draw.text(text_position, wrapped_text, fill="black", font=font)
     
