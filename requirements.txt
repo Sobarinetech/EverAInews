@@ -5,3 +5,4 @@ gTTS
 pygame
 opencv-python
 librosa
+matplotlib
