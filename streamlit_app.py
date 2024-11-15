@@ -3,11 +3,10 @@ import PyPDF2
 from PIL import Image
 import pygame
 import os
-import cv2
-import numpy as np
 import librosa
 import wave
 import contextlib
+import numpy as np
 
 # Select PDF for news
 def select_pdf():
@@ -56,23 +55,21 @@ def animate_mouth(avatar_img, audio_file):
         rate = f.getframerate()
         duration = frames / float(rate)
     
-    # Here, you could simulate mouth movement based on audio length.
-    # For simplicity, let's animate mouth with a basic shape.
-    
+    # Basic simulation: Animate mouth based on time
     for i in range(int(duration * 10)):  # simulate mouth for the audio's duration
         frame = avatar.copy()
         frame = frame.convert("RGBA")
 
-        # Simple simulation: Modify mouth shape based on time (simulating lip-sync)
-        if i % 2 == 0:  # Create a "mouth open" effect every other frame
-            mouth = Image.open("mouth_open.png").resize((100, 30))  # Custom mouth shape image
-        else:
+        # Simple simulation: Modify mouth shape based on time (open/close)
+        if i % 2 == 0:  # Open mouth effect
+            mouth = Image.open("mouth_open.png").resize((100, 30))  # Custom open mouth image
+        else:  # Closed mouth effect
             mouth = Image.open("mouth_closed.png").resize((100, 30))  # Custom closed mouth image
         
-        # Place mouth on the avatar
-        frame.paste(mouth, (60, 120), mouth)  # Adjust (60, 120) based on avatar
+        # Place mouth on the avatar (adjust the coordinates based on your avatar image)
+        frame.paste(mouth, (60, 120), mouth)
 
-        # Show the current frame (lip sync effect)
+        # Show the current frame (lip-sync effect)
         st.image(frame)
 
 # Slideshow of images
