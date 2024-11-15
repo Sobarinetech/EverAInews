@@ -1,4 +1,6 @@
 streamlit
-Pillow
 moviepy
-gTTS 
+numpy
+matplotlib
+gTTS
+Pillow
