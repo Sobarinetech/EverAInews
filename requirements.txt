@@ -3,3 +3,6 @@ PyPDF2
 Pillow 
 gTTS 
 pygame
+cv2
+dlib
+numpy 
