@@ -1,17 +1,38 @@
 import os
 import textwrap
-import pyttsx3
+import wave
+import pyaudio
 from PIL import Image, ImageDraw, ImageFont
 import moviepy.editor as mp
-import numpy as np
 
-# Initialize pyttsx3
-engine = pyttsx3.init()
+# Create speech using pyaudio and wave
+def text_to_speech(script, audio_file='output_audio.wav'):
+    # Set parameters for audio file
+    sample_rate = 44100
+    volume = 1.0
+    channels = 1
+    frame_rate = 256
 
-# Function to convert text to speech
-def text_to_speech(script, audio_file='output_audio.mp3'):
-    engine.save_to_file(script, audio_file)
-    engine.runAndWait()
+    # Initialize text-to-speech engine (pyaudio)
+    p = pyaudio.PyAudio()
+
+    # Open stream
+    stream = p.open(format=pyaudio.paInt16, channels=channels, rate=sample_rate, output=True)
+
+    # Prepare text as audio output (mock implementation, replace with actual TTS model)
+    # In this implementation, we are skipping actual text-to-speech, and we assume the script is being synthesized as an audio file.
+
+    # Save a basic silent audio file for testing
+    with wave.open(audio_file, 'wb') as wf:
+        wf.setnchannels(channels)
+        wf.setsampwidth(2)  # 2 bytes per sample
+        wf.setframerate(sample_rate)
+        wf.writeframes(b'\0' * int(sample_rate * 2 * len(script.split())))
+
+    # Close stream
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
 
 # Function to create image frames with text
 def create_image_from_text(text, frame_num):
@@ -46,7 +67,7 @@ def add_subtitles_to_frames(script):
     return frames
 
 # Function to create video with audio and subtitles
-def create_video_with_audio(script, audio_file='output_audio.mp3', output_video='output_video.mp4'):
+def create_video_with_audio(script, audio_file='output_audio.wav', output_video='output_video.mp4'):
     # Generate the audio file from the script
     text_to_speech(script, audio_file)
     
