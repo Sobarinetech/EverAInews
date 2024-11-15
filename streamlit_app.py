@@ -30,16 +30,20 @@ def extract_text(pdf_file):
 def play_news(news_text):
     tts = gTTS(text=news_text, lang='en')
     tts.save('news.mp3')
-    pygame.init()
+
+    pygame.mixer.pre_init(44100, -16, 2, 2048)  
     pygame.mixer.init()
     pygame.mixer.music.load('news.mp3')
     pygame.mixer.music.play()
+
+    while pygame.mixer.music.get_busy():
+        pygame.time.Clock().tick(10)
 
 def show_slideshow(slides):
     slide_index = 0
     while slide_index < len(slides):
         slide = Image.open(slides[slide_index])
-        slide.thumbnail((400, 400))  # Resize image
+        slide.thumbnail((400, 400))  
         st.image(slide)
         slide_index += 1
         if slide_index < len(slides):
@@ -56,7 +60,7 @@ def main():
     if pdf_file and avatar_file and slides_dir:
         st.markdown("## News Anchor")
         avatar = Image.open(avatar_file)
-        avatar.thumbnail((150, 150))  # Resize avatar image
+        avatar.thumbnail((150, 150))  
         st.image(avatar, caption='News Anchor')
 
         news_text = extract_text(pdf_file)
