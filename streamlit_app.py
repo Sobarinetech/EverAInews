@@ -37,29 +37,48 @@ def play_news(news_text):
     st.audio('news.mp3')
 
 def animate_mouth(avatar_img, audio_file):
-    cap = cv2.VideoCapture('output.mp4')
-    audio, sr = librosa.load(audio_file)
-    detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+    # Load the avatar image
+    avatar = Image.open(avatar_img)
+    avatar = avatar.convert("RGBA")
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    # Load the audio file
+    audio, sr = librosa.load(audio_file, sr=None)
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = detector(gray)
-        for face in faces:
-            landmarks = predictor(gray, face)
-            mouth_points = landmarks.parts()[48:68]
-            mouth_img = np.zeros_like(frame)
-            cv2.fillPoly(mouth_img, [np.array([point.x, point.y] for point in mouth_points)], (255, 255, 255))
-            frame = cv2.addWeighted(frame, 1, mouth_img, 0.5, 0)
+    # Extract features from the audio to simulate lip movement
+    onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
 
-        cv2.imshow('Avatar', frame)
-        cv2.waitKey(1)
+    # Normalize onset energy
+    normalized_onset = (onset_env - np.min(onset_env)) / (np.max(onset_env) - np.min(onset_env))
 
-    cv2.destroyAllWindows()
+    # Initialize a pygame window for displaying the avatar
+    pygame.init()
+    screen = pygame.display.set_mode(avatar.size)
+    clock = pygame.time.Clock()
+
+    # Main loop for animating the mouth
+    for i, energy in enumerate(normalized_onset):
+        avatar_copy = avatar.copy()
+        # Simulate mouth opening based on audio energy
+        mouth_height = int(energy * 10)
+        avatar_copy = simulate_mouth_opening(avatar_copy, mouth_height)
+
+        # Display the avatar on screen
+        screen.fill((255, 255, 255))  # Clear the screen
+        avatar_copy_surface = pygame.image.fromstring(avatar_copy.tobytes(), avatar_copy.size, avatar_copy.mode)
+        screen.blit(avatar_copy_surface, (0, 0))
+        pygame.display.flip()
+
+        # Control frame rate
+        clock.tick(60)
+
+    pygame.quit()
+
+def simulate_mouth_opening(avatar, mouth_height):
+    # This is a simple way of simulating the mouth movement. You could use more sophisticated methods here.
+    avatar_array = np.array(avatar)
+    # Simple mouth-opening simulation by modifying pixel rows at the bottom of the image
+    avatar_array[-mouth_height:, :] = [255, 0, 0, 255]  # Change bottom pixels (simulated mouth open)
+    return Image.fromarray(avatar_array)
 
 def show_slideshow(slides):
     slide_index = 0
