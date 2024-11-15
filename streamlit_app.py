@@ -1,88 +1,71 @@
 import streamlit as st
-import time
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse, Rectangle
-from moviepy.editor import ImageSequenceClip, AudioFileClip
+import cv2
 from gtts import gTTS
+from moviepy.editor import ImageSequenceClip, AudioFileClip
 from PIL import Image
+import os
 
-# Function to generate audio with gTTS (Google Text-to-Speech)
+# Function to generate audio using gTTS (Google Text-to-Speech)
 def generate_audio(script_text, audio_path="news_audio.mp3"):
     tts = gTTS(script_text, lang="en")
     tts.save(audio_path)
     return audio_path
 
-# Function to create an avatar frame
-def draw_avatar(mouth_state="closed"):
-    fig, ax = plt.subplots(figsize=(4, 6))
-    
-    # Head
-    head = Ellipse((0.5, 0.75), width=0.6, height=0.8, color="peachpuff", zorder=1)
-    ax.add_patch(head)
-
-    # Eyes
-    left_eye = Ellipse((0.35, 0.85), width=0.1, height=0.2, color="white", zorder=2)
-    right_eye = Ellipse((0.65, 0.85), width=0.1, height=0.2, color="white", zorder=2)
-    ax.add_patch(left_eye)
-    ax.add_patch(right_eye)
-
-    # Pupils
-    left_pupil = Ellipse((0.35, 0.85), width=0.05, height=0.1, color="black", zorder=3)
-    right_pupil = Ellipse((0.65, 0.85), width=0.05, height=0.1, color="black", zorder=3)
-    ax.add_patch(left_pupil)
-    ax.add_patch(right_pupil)
-
-    # Nose
-    nose = Rectangle((0.475, 0.7), width=0.05, height=0.1, color="sienna", zorder=4)
-    ax.add_patch(nose)
-
-    # Mouth
-    if mouth_state == "open":
-        mouth = Ellipse((0.5, 0.6), width=0.3, height=0.1, color="red", zorder=5)
+# Function to animate mouth based on phonemes (simplified mapping)
+def get_mouth_shape(phoneme):
+    # Mapping phonemes to basic mouth shapes
+    if phoneme in ['a', 'e', 'o', 'u']:
+        return "open"
+    elif phoneme in ['b', 'p', 'm']:
+        return "closed"
     else:
-        mouth = Rectangle((0.35, 0.59), width=0.3, height=0.05, color="red", zorder=5)
-    ax.add_patch(mouth)
+        return "neutral"
 
-    # Body
-    body = Rectangle((0.25, 0.1), width=0.5, height=0.5, color="navy", zorder=1)
-    ax.add_patch(body)
-
-    # Plot adjustments
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1.5)
-    ax.axis("off")
-    plt.close(fig)
-
-    # Save the figure as an image
-    img_path = f"frame_{mouth_state}.png"
-    fig.savefig(img_path, bbox_inches="tight", dpi=100)
-    return img_path
-
-# Function to generate frames for video
-def generate_frames(script_text):
+# Function to generate human avatar frames based on input text
+def generate_human_avatar_frames(script_text, face_image_path="human_face.jpg"):
     frames = []
-    for i, char in enumerate(script_text):
-        mouth_state = "open" if i % 2 == 0 else "closed"
-        frame_path = draw_avatar(mouth_state)
+    face_img = cv2.imread(face_image_path)
+    
+    # Phoneme simulation based on input text (simple version, actual phoneme recognition would be better)
+    script_phonemes = [word for word in script_text.split()]  # Breaking into words for simplicity
+    
+    # Iterate through the script and animate the mouth for each phoneme (for simplicity, treating words as phonemes)
+    for i, word in enumerate(script_phonemes):
+        mouth_state = get_mouth_shape(word[0].lower())  # Using the first letter as a simple phoneme
+        
+        if mouth_state == "open":
+            cv2.ellipse(face_img, (250, 300), (50, 20), 0, 0, 180, (0, 0, 255), -1)  # Open mouth
+        elif mouth_state == "closed":
+            cv2.rectangle(face_img, (230, 290), (270, 310), (0, 0, 255), -1)  # Closed mouth
+        else:
+            # Neutral mouth
+            cv2.line(face_img, (230, 300), (270, 300), (0, 0, 255), 2)
+        
+        # Save each frame
+        frame_path = f"frame_{i}.jpg"
+        cv2.imwrite(frame_path, face_img)
         frames.append(frame_path)
+    
     return frames
 
-# Function to create the video
+# Function to create a video with frames and audio
 def create_video(frames, audio_path, output_video_path="news_video.mp4"):
-    # Load frames into a clip
+    # Load frames into a video clip
     clip = ImageSequenceClip(frames, fps=10)
     
-    # Add audio to the clip
+    # Add audio to the video
     audio = AudioFileClip(audio_path)
     video = clip.set_audio(audio)
+    
+    # Save the video
     video.write_videofile(output_video_path, codec="libx264", audio_codec="aac")
     return output_video_path
 
 # Streamlit app main function
 def main():
-    st.title("News Anchor Avatar with Video Generation")
-    st.markdown("### Paste your news script below to generate an avatar video with narration!")
+    st.title("Human-Like News Anchor Video Generator")
+    st.markdown("### Paste your news script below to generate a human-like avatar video with narration!")
     
     # Input for news script
     news_script = st.text_area("Type or Paste News Script Below:")
@@ -93,13 +76,13 @@ def main():
             st.warning("Please provide a valid script to generate the video!")
             return
 
-        # Generate frames
-        st.info("Generating avatar frames...")
-        frames = generate_frames(news_script)
-        
         # Generate audio
         st.info("Generating TTS audio...")
         audio_path = generate_audio(news_script)
+        
+        # Generate avatar frames
+        st.info("Generating avatar frames...")
+        frames = generate_human_avatar_frames(news_script)
         
         # Create video
         st.info("Creating video...")
