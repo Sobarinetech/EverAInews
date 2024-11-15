@@ -1,69 +1,49 @@
 import streamlit as st
-import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from moviepy.editor import ImageSequenceClip, AudioFileClip
+import cv2
 from gtts import gTTS
+import os
+from moviepy.editor import ImageSequenceClip, AudioFileClip
 from PIL import Image
+import random
+import time
 
-# Function to create an avatar frame using the uploaded image
-def draw_avatar_with_image(uploaded_image, mouth_state="closed"):
-    fig, ax = plt.subplots(figsize=(4, 6))
-
-    # Head (Use uploaded image as the face)
+# Function to create a cool cartoon avatar with basic animations
+def create_animated_avatar(script_text, uploaded_image):
+    # Load the uploaded image (resize to fit the avatar body)
     img = Image.open(uploaded_image)
-    img = img.resize((200, 200))
-    img_path = "temp_face_image.png"
-    img.save(img_path)
+    img = img.resize((300, 300))  # Resize to avatar size
+
+    # Avatar base (blank canvas)
+    avatar_canvas = np.ones((500, 500, 3), dtype=np.uint8) * 255  # White background canvas
     
-    face_image = plt.imread(img_path)
-    ax.imshow(face_image, extent=[0.25, 0.75, 0.55, 1.1], zorder=1)
-
-    # Eyes (Fixed position for simplicity, modify as needed)
-    left_eye = plt.Circle((0.35, 0.85), radius=0.05, color="white", zorder=2)
-    right_eye = plt.Circle((0.65, 0.85), radius=0.05, color="white", zorder=2)
-    ax.add_patch(left_eye)
-    ax.add_patch(right_eye)
-
-    # Pupils
-    left_pupil = plt.Circle((0.35, 0.85), radius=0.02, color="black", zorder=3)
-    right_pupil = plt.Circle((0.65, 0.0), radius=0.02, color="black", zorder=3)
-    ax.add_patch(left_pupil)
-    ax.add_patch(right_pupil)
-
-    # Nose
-    nose = plt.Circle((0.5, 0.75), radius=0.02, color="sienna", zorder=4)
-    ax.add_patch(nose)
-
-    # Mouth
-    if mouth_state == "open":
-        mouth = plt.Rectangle((0.35, 0.6), 0.3, 0.1, color="red", zorder=5)
-    else:
-        mouth = plt.Rectangle((0.35, 0.59), 0.3, 0.05, color="red", zorder=5)
-    ax.add_patch(mouth)
-
-    # Body
-    body = plt.Rectangle((0.25, 0.1), 0.5, 0.5, color="navy", zorder=1)
-    ax.add_patch(body)
-
-    # Plot adjustments
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1.5)
-    ax.axis("off")
-    plt.close(fig)
-
-    # Save the figure as an image
-    img_path = f"frame_{mouth_state}.png"
-    fig.savefig(img_path, bbox_inches="tight", dpi=100)
-    return img_path
-
-# Function to generate frames for video
-def generate_frames(script_text, uploaded_image):
+    # Add the uploaded face to the canvas
+    avatar_canvas[100:400, 100:400] = np.array(img)
+    
+    # Add basic animations (mouth opening, eyes blinking, etc.)
     frames = []
-    for i, char in enumerate(script_text):
-        mouth_state = "open" if i % 2 == 0 else "closed"
-        frame_path = draw_avatar_with_image(uploaded_image, mouth_state)
+    for i in range(len(script_text)):
+        frame = avatar_canvas.copy()
+        
+        # Randomize mouth opening/closing for a cool effect
+        mouth_opening = random.choice([True, False])
+        mouth_position = (300, 350, 350, 380) if mouth_opening else (300, 360, 350, 370)
+        
+        # Draw mouth
+        cv2.rectangle(frame, (mouth_position[0], mouth_position[1]), (mouth_position[2], mouth_position[3]), (0, 0, 255), -1)
+        
+        # Random eye movement for a cool animated effect
+        eye_position_left = (230, 230) if random.choice([True, False]) else (240, 230)
+        eye_position_right = (270, 230) if random.choice([True, False]) else (260, 230)
+        
+        cv2.circle(frame, eye_position_left, 10, (0, 0, 0), -1)  # Left eye
+        cv2.circle(frame, eye_position_right, 10, (0, 0, 0), -1)  # Right eye
+        
+        # Add the current frame to the frames list
+        frame_path = f"frame_{i}.png"
+        cv2.imwrite(frame_path, frame)
         frames.append(frame_path)
+    
     return frames
 
 # Function to generate TTS audio
@@ -72,22 +52,24 @@ def generate_audio(script_text, audio_path="news_audio.mp3"):
     tts.save(audio_path)
     return audio_path
 
-# Function to create the video
+# Function to create the video from frames and audio
 def create_video(frames, audio_path, output_video_path="news_video.mp4"):
-    # Load frames into a clip
+    # Load frames into a video clip
     clip = ImageSequenceClip(frames, fps=10)
     
-    # Add audio to the clip
+    # Add audio to the video
     audio = AudioFileClip(audio_path)
     video = clip.set_audio(audio)
+    
+    # Write the video to output file
     video.write_videofile(output_video_path, codec="libx264", audio_codec="aac")
     return output_video_path
 
-# Streamlit app main function
+# Main Streamlit function
 def main():
-    st.title("News Anchor Avatar with Video Generation")
-    st.markdown("### Upload your image and paste your news script below to generate an avatar video with narration!")
-    
+    st.title("Cool Animated Avatar with News Script")
+    st.markdown("### Upload your image and paste your news script below to generate an animated avatar!")
+
     # Image upload option
     uploaded_image = st.file_uploader("Upload an Image", type=["jpg", "jpeg", "png"])
     
@@ -105,15 +87,15 @@ def main():
                 st.warning("Please provide a valid script to generate the video!")
                 return
 
-            # Generate frames
+            # Generate frames for the avatar with animations
             st.info("Generating avatar frames...")
-            frames = generate_frames(news_script, uploaded_image)
+            frames = create_animated_avatar(news_script, uploaded_image)
             
-            # Generate audio
+            # Generate audio from the script
             st.info("Generating TTS audio...")
             audio_path = generate_audio(news_script)
             
-            # Create video
+            # Create video from frames and audio
             st.info("Creating video...")
             video_path = create_video(frames, audio_path)
 
