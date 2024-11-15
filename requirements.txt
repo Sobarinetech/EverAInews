@@ -4,3 +4,6 @@ numpy
 matplotlib
 gTTS
 Pillow
+pyttsx3 
+pydub 
+SpeechRecognition 
