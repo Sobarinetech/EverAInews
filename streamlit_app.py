@@ -1,112 +1,83 @@
 import streamlit as st
-import PyPDF2
-from PIL import Image
-import pygame
-import os
-import librosa
-import wave
-import contextlib
+import time
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse, Rectangle
 
-# Select PDF for news
-def select_pdf():
-    st.markdown("## Upload News PDF")
-    pdf_file = st.file_uploader("Select PDF file", type=['pdf'])
-    return pdf_file
+# Function to create a basic 3D-like avatar
+def draw_avatar(mouth_state="closed"):
+    # Create a figure
+    fig, ax = plt.subplots(figsize=(4, 6))
 
-# Select Avatar
-def select_avatar():
-    st.markdown("## Upload Anchor Avatar")
-    avatar_file = st.file_uploader("Select anchor avatar image", type=['jpg', 'png'])
-    return avatar_file
+    # Draw the head
+    head = Ellipse((0.5, 0.75), width=0.6, height=0.8, color="peachpuff", zorder=1)
+    ax.add_patch(head)
 
-# Select Slideshow Images
-def select_slides():
-    st.markdown("## Upload Slideshow Images")
-    slides_dir = st.file_uploader("Select slideshow images", type=['jpg', 'png'], accept_multiple_files=True)
-    return slides_dir
+    # Draw the eyes
+    left_eye = Ellipse((0.35, 0.85), width=0.1, height=0.2, color="white", zorder=2)
+    right_eye = Ellipse((0.65, 0.85), width=0.1, height=0.2, color="white", zorder=2)
+    ax.add_patch(left_eye)
+    ax.add_patch(right_eye)
 
-# Extract text from PDF
-def extract_text(pdf_file):
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    news_text = ''
-    for page in pdf_reader.pages:
-        news_text += page.extract_text()
-    return news_text
+    # Draw pupils
+    left_pupil = Ellipse((0.35, 0.85), width=0.05, height=0.1, color="black", zorder=3)
+    right_pupil = Ellipse((0.65, 0.85), width=0.05, height=0.1, color="black", zorder=3)
+    ax.add_patch(left_pupil)
+    ax.add_patch(right_pupil)
 
-# Play News
-def play_news(news_text):
-    tts = gTTS(text=news_text, lang='en')
-    tts.save('news.mp3')
-    st.audio('news.mp3')
+    # Draw the nose
+    nose = Rectangle((0.475, 0.7), width=0.05, height=0.1, color="sienna", zorder=4)
+    ax.add_patch(nose)
 
-# Lip-sync simulation without dlib
-def animate_mouth(avatar_img, audio_file):
-    # Load the avatar image
-    avatar = Image.open(avatar_img)
-    avatar = avatar.convert("RGBA")
-    
-    # Load the audio file
-    audio, sr = librosa.load(audio_file)
-    
-    # Calculate the duration of the audio
-    with contextlib.closing(wave.open(audio_file, 'r')) as f:
-        frames = f.getnframes()
-        rate = f.getframerate()
-        duration = frames / float(rate)
-    
-    # Basic simulation: Animate mouth based on time
-    for i in range(int(duration * 10)):  # simulate mouth for the audio's duration
-        frame = avatar.copy()
-        frame = frame.convert("RGBA")
+    # Draw the mouth
+    if mouth_state == "open":
+        mouth = Ellipse((0.5, 0.6), width=0.3, height=0.1, color="red", zorder=5)
+    else:  # Closed mouth
+        mouth = Rectangle((0.35, 0.59), width=0.3, height=0.05, color="red", zorder=5)
+    ax.add_patch(mouth)
 
-        # Simple simulation: Modify mouth shape based on time (open/close)
-        if i % 2 == 0:  # Open mouth effect
-            mouth = Image.open("mouth_open.png").resize((100, 30))  # Custom open mouth image
-        else:  # Closed mouth effect
-            mouth = Image.open("mouth_closed.png").resize((100, 30))  # Custom closed mouth image
-        
-        # Place mouth on the avatar (adjust the coordinates based on your avatar image)
-        frame.paste(mouth, (60, 120), mouth)
+    # Draw the body
+    body = Rectangle((0.25, 0.1), width=0.5, height=0.5, color="navy", zorder=1)
+    ax.add_patch(body)
 
-        # Show the current frame (lip-sync effect)
-        st.image(frame)
+    # Set up the plot
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1.5)
+    ax.axis("off")
+    plt.close(fig)  # Close the plot to prevent duplicate rendering
+    return fig
 
-# Slideshow of images
-def show_slideshow(slides):
-    slide_index = 0
-    while slide_index < len(slides):
-        slide = Image.open(slides[slide_index])
-        slide.thumbnail((400, 400))
-        st.image(slide)
-        slide_index += 1
-        if slide_index < len(slides):
-            next_slide_button = st.button('Next Slide', key='next_slide_button')
-            if next_slide_button:
-                pass
+# Function to animate the avatar based on the news script
+def animate_avatar(script_text):
+    st.markdown("## Animation in Progress")
+    if not script_text.strip():
+        st.warning("Please provide a valid news script to start the animation.")
+        return
 
-# Main
+    # Loop through the script text and animate mouth movement
+    for i, char in enumerate(script_text):
+        mouth_state = "open" if i % 2 == 0 else "closed"  # Alternate mouth state
+        fig = draw_avatar(mouth_state)
+        st.pyplot(fig)  # Render the avatar
+        time.sleep(0.1)  # Adjust animation speed
+
+# Main application function
 def main():
-    st.title("News Anchor")
+    st.title("News Anchor 3D Avatar Simulation")
+    st.markdown(
+        """
+        This app simulates a 3D-like avatar reading a script with animated mouth movements.
+        Type or paste your news script below to start the animation.
+        """
+    )
 
-    pdf_file = select_pdf()
-    avatar_file = select_avatar()
-    slides_dir = select_slides()
+    # Input for the news script
+    news_script = st.text_area("Type or Paste the News Script Below:")
 
-    if pdf_file and avatar_file and slides_dir:
-        st.markdown("## News Anchor")
-        avatar = Image.open(avatar_file)
-        avatar.thumbnail((150, 150))
-        st.image(avatar, caption='News Anchor')
+    # Button to start the animation
+    if st.button("Start Animation"):
+        animate_avatar(news_script)
 
-        news_text = extract_text(pdf_file)
-        st.write(news_text)
-
-        play_button = st.button('Play News', key='play_news_button')
-        if play_button:
-            play_news(news_text)
-            animate_mouth(avatar_file, 'news.mp3')
-            show_slideshow(slides_dir)
-
+# Entry point of the script
 if __name__ == "__main__":
     main()
