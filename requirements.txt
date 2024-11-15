@@ -1,4 +1,4 @@
 streamlit
 pillow
 moviepy
-pyaudio
+gTTS
