@@ -8,22 +8,27 @@ import cv2
 import numpy as np
 import librosa
 import dlib
+import tempfile
 
+# Function to select PDF file
 def select_pdf():
     st.markdown("## Upload News PDF")
     pdf_file = st.file_uploader("Select PDF file", type=['pdf'])
     return pdf_file
 
+# Function to select Avatar Image
 def select_avatar():
     st.markdown("## Upload Anchor Avatar")
     avatar_file = st.file_uploader("Select anchor avatar image", type=['jpg', 'png'])
     return avatar_file
 
+# Function to select Slideshow Images
 def select_slides():
     st.markdown("## Upload Slideshow Images")
     slides_dir = st.file_uploader("Select slideshow images", type=['jpg', 'png'], accept_multiple_files=True)
     return slides_dir
 
+# Function to extract text from PDF
 def extract_text(pdf_file):
     pdf_reader = PyPDF2.PdfReader(pdf_file)
     news_text = ''
@@ -31,55 +36,46 @@ def extract_text(pdf_file):
         news_text += page.extract_text()
     return news_text
 
+# Function to play news using TTS
 def play_news(news_text):
     tts = gTTS(text=news_text, lang='en')
     tts.save('news.mp3')
     st.audio('news.mp3')
 
+# Function to animate avatar's mouth using dlib
 def animate_mouth(avatar_img, audio_file):
-    # Load the avatar image
-    avatar = Image.open(avatar_img)
-    avatar = avatar.convert("RGBA")
+    # Load audio and prepare for lip sync
+    audio, sr = librosa.load(audio_file)
+    
+    # Use OpenCV for video generation
+    cap = cv2.VideoCapture('output.mp4')
+    
+    # Initialize face detector and shape predictor
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+    
+    # Animate mouth
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-    # Load the audio file
-    audio, sr = librosa.load(audio_file, sr=None)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = detector(gray)
+        
+        for face in faces:
+            landmarks = predictor(gray, face)
+            mouth_points = landmarks.parts()[48:68]
+            mouth_img = np.zeros_like(frame)
+            cv2.fillPoly(mouth_img, [np.array([[point.x, point.y] for point in mouth_points])], (255, 255, 255))
+            frame = cv2.addWeighted(frame, 1, mouth_img, 0.5, 0)
 
-    # Extract features from the audio to simulate lip movement
-    onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
+        cv2.imshow('Avatar', frame)
+        cv2.waitKey(1)
 
-    # Normalize onset energy
-    normalized_onset = (onset_env - np.min(onset_env)) / (np.max(onset_env) - np.min(onset_env))
+    cv2.destroyAllWindows()
 
-    # Initialize a pygame window for displaying the avatar
-    pygame.init()
-    screen = pygame.display.set_mode(avatar.size)
-    clock = pygame.time.Clock()
-
-    # Main loop for animating the mouth
-    for i, energy in enumerate(normalized_onset):
-        avatar_copy = avatar.copy()
-        # Simulate mouth opening based on audio energy
-        mouth_height = int(energy * 10)
-        avatar_copy = simulate_mouth_opening(avatar_copy, mouth_height)
-
-        # Display the avatar on screen
-        screen.fill((255, 255, 255))  # Clear the screen
-        avatar_copy_surface = pygame.image.fromstring(avatar_copy.tobytes(), avatar_copy.size, avatar_copy.mode)
-        screen.blit(avatar_copy_surface, (0, 0))
-        pygame.display.flip()
-
-        # Control frame rate
-        clock.tick(60)
-
-    pygame.quit()
-
-def simulate_mouth_opening(avatar, mouth_height):
-    # This is a simple way of simulating the mouth movement. You could use more sophisticated methods here.
-    avatar_array = np.array(avatar)
-    # Simple mouth-opening simulation by modifying pixel rows at the bottom of the image
-    avatar_array[-mouth_height:, :] = [255, 0, 0, 255]  # Change bottom pixels (simulated mouth open)
-    return Image.fromarray(avatar_array)
-
+# Function to show slideshow images
 def show_slideshow(slides):
     slide_index = 0
     while slide_index < len(slides):
@@ -92,6 +88,7 @@ def show_slideshow(slides):
             if next_slide_button:
                 pass
 
+# Main function to execute the app
 def main():
     st.title("News Anchor")
 
@@ -100,17 +97,22 @@ def main():
     slides_dir = select_slides()
 
     if pdf_file and avatar_file and slides_dir:
+        # Display Avatar
         st.markdown("## News Anchor")
         avatar = Image.open(avatar_file)
         avatar.thumbnail((150, 150))
         st.image(avatar, caption='News Anchor')
 
+        # Extract Text from PDF
         news_text = extract_text(pdf_file)
         st.write(news_text)
 
+        # Play News Audio
         play_button = st.button('Play News', key='play_news_button')
         if play_button:
             play_news(news_text)
+            
+            # Animate Mouth and Display Slideshow
             animate_mouth(avatar_file, 'news.mp3')
             show_slideshow(slides_dir)
 
