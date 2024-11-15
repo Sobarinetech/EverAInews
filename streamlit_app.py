@@ -9,37 +9,42 @@ import random
 import time
 
 # Function to create a cool cartoon avatar with basic animations
-def create_animated_avatar(script_text, uploaded_image):
-    # Load the uploaded image (resize to fit the avatar body)
-    img = Image.open(uploaded_image)
-    img = img.resize((300, 300))  # Resize to avatar size
-
-    # Avatar base (blank canvas)
+def create_animated_anchor(script_text):
+    # Create a blank canvas for the avatar
     avatar_canvas = np.ones((500, 500, 3), dtype=np.uint8) * 255  # White background canvas
+
+    # Create a simple cartoon avatar (face, eyes, and mouth)
+    # Draw face
+    cv2.circle(avatar_canvas, (250, 200), 100, (200, 200, 255), -1)  # Face (light skin)
+
+    # Draw eyes
+    cv2.circle(avatar_canvas, (210, 170), 15, (0, 0, 0), -1)  # Left eye
+    cv2.circle(avatar_canvas, (290, 170), 15, (0, 0, 0), -1)  # Right eye
     
-    # Add the uploaded face to the canvas
-    avatar_canvas[100:400, 100:400] = np.array(img)
-    
-    # Add basic animations (mouth opening, eyes blinking, etc.)
+    # Draw the mouth (closed by default)
+    mouth_position = (220, 250, 280, 270)  # Rectangular mouth
+    cv2.rectangle(avatar_canvas, (mouth_position[0], mouth_position[1]), (mouth_position[2], mouth_position[3]), (0, 0, 255), -1)
+
+    # Generate frames with animation (mouth opening/closing, eyes blinking)
     frames = []
     for i in range(len(script_text)):
         frame = avatar_canvas.copy()
-        
-        # Randomize mouth opening/closing for a cool effect
+
+        # Simulate mouth opening/closing
         mouth_opening = random.choice([True, False])
-        mouth_position = (300, 350, 350, 380) if mouth_opening else (300, 360, 350, 370)
-        
-        # Draw mouth
+        mouth_position = (220, 250, 280, 270) if mouth_opening else (220, 260, 280, 275)
         cv2.rectangle(frame, (mouth_position[0], mouth_position[1]), (mouth_position[2], mouth_position[3]), (0, 0, 255), -1)
         
-        # Random eye movement for a cool animated effect
-        eye_position_left = (230, 230) if random.choice([True, False]) else (240, 230)
-        eye_position_right = (270, 230) if random.choice([True, False]) else (260, 230)
+        # Simulate eye blinking
+        blink = random.choice([True, False])
+        if blink:
+            cv2.circle(frame, (210, 170), 15, (255, 255, 255), -1)  # Left eye blink
+            cv2.circle(frame, (290, 170), 15, (255, 255, 255), -1)  # Right eye blink
+        else:
+            cv2.circle(frame, (210, 170), 15, (0, 0, 0), -1)  # Left eye open
+            cv2.circle(frame, (290, 170), 15, (0, 0, 0), -1)  # Right eye open
         
-        cv2.circle(frame, eye_position_left, 10, (0, 0, 0), -1)  # Left eye
-        cv2.circle(frame, eye_position_right, 10, (0, 0, 0), -1)  # Right eye
-        
-        # Add the current frame to the frames list
+        # Add the current frame to the list of frames
         frame_path = f"frame_{i}.png"
         cv2.imwrite(frame_path, frame)
         frames.append(frame_path)
@@ -67,40 +72,32 @@ def create_video(frames, audio_path, output_video_path="news_video.mp4"):
 
 # Main Streamlit function
 def main():
-    st.title("Cool Animated Avatar with News Script")
-    st.markdown("### Upload your image and paste your news script below to generate an animated avatar!")
+    st.title("Cool Animated Anchor")
+    st.markdown("### Type your news script below to generate an animated anchor!")
 
-    # Image upload option
-    uploaded_image = st.file_uploader("Upload an Image", type=["jpg", "jpeg", "png"])
-    
-    if uploaded_image is not None:
-        # Display uploaded image
-        img = Image.open(uploaded_image)
-        st.image(img, caption="Uploaded Image", use_column_width=True)
+    # Input for news script
+    news_script = st.text_area("Type or Paste News Script Below:")
 
-        # Input for news script
-        news_script = st.text_area("Type or Paste News Script Below:")
+    # Generate video button
+    if st.button("Generate Video"):
+        if not news_script.strip():
+            st.warning("Please provide a valid script to generate the video!")
+            return
+
+        # Generate frames for the avatar with animations
+        st.info("Generating avatar frames...")
+        frames = create_animated_anchor(news_script)
         
-        # Generate video button
-        if st.button("Generate Video"):
-            if not news_script.strip():
-                st.warning("Please provide a valid script to generate the video!")
-                return
+        # Generate audio from the script
+        st.info("Generating TTS audio...")
+        audio_path = generate_audio(news_script)
+        
+        # Create video from frames and audio
+        st.info("Creating video...")
+        video_path = create_video(frames, audio_path)
 
-            # Generate frames for the avatar with animations
-            st.info("Generating avatar frames...")
-            frames = create_animated_avatar(news_script, uploaded_image)
-            
-            # Generate audio from the script
-            st.info("Generating TTS audio...")
-            audio_path = generate_audio(news_script)
-            
-            # Create video from frames and audio
-            st.info("Creating video...")
-            video_path = create_video(frames, audio_path)
-
-            st.success("Video created successfully!")
-            st.video(video_path)
+        st.success("Video created successfully!")
+        st.video(video_path)
 
 # Run the Streamlit app
 if __name__ == "__main__":
