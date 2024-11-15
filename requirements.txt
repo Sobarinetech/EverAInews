@@ -1,8 +1,8 @@
-streamlit 
-PyPDF2 
-Pillow 
-gTTS 
+streamlit
+PyPDF2
+Pillow
+gTTS
 pygame
-cv2
+opencv-python
 dlib
-numpy 
+librosa
