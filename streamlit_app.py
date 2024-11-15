@@ -7,8 +7,9 @@ import os
 import cv2
 import numpy as np
 import librosa
-import dlib
 import tempfile
+import wave
+import struct
 
 # Function to select PDF file
 def select_pdf():
@@ -42,38 +43,31 @@ def play_news(news_text):
     tts.save('news.mp3')
     st.audio('news.mp3')
 
-# Function to animate avatar's mouth using dlib
-def animate_mouth(avatar_img, audio_file):
-    # Load audio and prepare for lip sync
+# Function to animate the avatar with simplified mouth movement
+def animate_mouth_simple(audio_file, avatar_img):
+    # Simulate basic mouth movements based on audio length
     audio, sr = librosa.load(audio_file)
+    # Determine how many "mouth frames" we should show based on the length of the audio
+    duration = librosa.get_duration(y=audio, sr=sr)
+    num_frames = int(duration * 10)  # 10 frames per second of audio
+    mouth_images = ['mouth_open.png', 'mouth_closed.png']  # Predefined mouth images
     
-    # Use OpenCV for video generation
-    cap = cv2.VideoCapture('output.mp4')
+    # Load the avatar image and simulate lip-sync by switching between mouth images
+    avatar = Image.open(avatar_img)
+    avatar.thumbnail((150, 150))
+    st.image(avatar, caption='News Anchor')
     
-    # Initialize face detector and shape predictor
-    detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
-    
-    # Animate mouth
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    for i in range(num_frames):
+        # Alternate between mouth open and closed
+        mouth_frame = mouth_images[i % len(mouth_images)]
+        mouth_img = Image.open(mouth_frame)
+        mouth_img = mouth_img.resize((50, 50))  # Resize the mouth image to fit the avatar
+        avatar.paste(mouth_img, (50, 100), mouth_img)  # Paste mouth image on avatar
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = detector(gray)
+        st.image(avatar, caption=f'News Anchor Frame {i+1}')
         
-        for face in faces:
-            landmarks = predictor(gray, face)
-            mouth_points = landmarks.parts()[48:68]
-            mouth_img = np.zeros_like(frame)
-            cv2.fillPoly(mouth_img, [np.array([[point.x, point.y] for point in mouth_points])], (255, 255, 255))
-            frame = cv2.addWeighted(frame, 1, mouth_img, 0.5, 0)
-
-        cv2.imshow('Avatar', frame)
-        cv2.waitKey(1)
-
-    cv2.destroyAllWindows()
+    # Play the news audio again (for sync with visual)
+    st.audio(audio_file)
 
 # Function to show slideshow images
 def show_slideshow(slides):
@@ -98,7 +92,6 @@ def main():
 
     if pdf_file and avatar_file and slides_dir:
         # Display Avatar
-        st.markdown("## News Anchor")
         avatar = Image.open(avatar_file)
         avatar.thumbnail((150, 150))
         st.image(avatar, caption='News Anchor')
@@ -112,8 +105,8 @@ def main():
         if play_button:
             play_news(news_text)
             
-            # Animate Mouth and Display Slideshow
-            animate_mouth(avatar_file, 'news.mp3')
+            # Simulate simple mouth animation and Display Slideshow
+            animate_mouth_simple('news.mp3', avatar_file)
             show_slideshow(slides_dir)
 
 if __name__ == "__main__":
