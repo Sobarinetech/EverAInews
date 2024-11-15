@@ -1,54 +1,64 @@
 import streamlit as st
 import numpy as np
 import cv2
+import random
 from gtts import gTTS
 import os
 from moviepy.editor import ImageSequenceClip, AudioFileClip
 from PIL import Image
-import random
 import time
 
 # Function to create a cool cartoon avatar with basic animations
-def create_animated_anchor(script_text):
-    # Create a blank canvas for the avatar
-    avatar_canvas = np.ones((500, 500, 3), dtype=np.uint8) * 255  # White background canvas
-
-    # Create a simple cartoon avatar (face, eyes, and mouth)
-    # Draw face
-    cv2.circle(avatar_canvas, (250, 200), 100, (200, 200, 255), -1)  # Face (light skin)
-
-    # Draw eyes
-    cv2.circle(avatar_canvas, (210, 170), 15, (0, 0, 0), -1)  # Left eye
-    cv2.circle(avatar_canvas, (290, 170), 15, (0, 0, 0), -1)  # Right eye
-    
-    # Draw the mouth (closed by default)
-    mouth_position = (220, 250, 280, 270)  # Rectangular mouth
-    cv2.rectangle(avatar_canvas, (mouth_position[0], mouth_position[1]), (mouth_position[2], mouth_position[3]), (0, 0, 255), -1)
-
-    # Generate frames with animation (mouth opening/closing, eyes blinking)
+def create_animated_avatar(script_text):
     frames = []
     for i in range(len(script_text)):
-        frame = avatar_canvas.copy()
+        avatar_canvas = np.ones((500, 500, 3), dtype=np.uint8) * 255  # White background canvas
 
-        # Simulate mouth opening/closing
-        mouth_opening = random.choice([True, False])
-        mouth_position = (220, 250, 280, 270) if mouth_opening else (220, 260, 280, 275)
-        cv2.rectangle(frame, (mouth_position[0], mouth_position[1]), (mouth_position[2], mouth_position[3]), (0, 0, 255), -1)
-        
-        # Simulate eye blinking
-        blink = random.choice([True, False])
-        if blink:
-            cv2.circle(frame, (210, 170), 15, (255, 255, 255), -1)  # Left eye blink
-            cv2.circle(frame, (290, 170), 15, (255, 255, 255), -1)  # Right eye blink
-        else:
-            cv2.circle(frame, (210, 170), 15, (0, 0, 0), -1)  # Left eye open
-            cv2.circle(frame, (290, 170), 15, (0, 0, 0), -1)  # Right eye open
-        
+        # Draw face with random position and size
+        face_x = random.randint(150, 350)
+        face_y = random.randint(100, 300)
+        face_radius = random.randint(50, 150)
+        cv2.circle(avatar_canvas, (face_x, face_y), face_radius, (random.randint(0,255), random.randint(0,255), random.randint(0,255)), -1)  # Face
+
+        # Draw eyes with random position and size
+        eye1_x = face_x - random.randint(20, 50)
+        eye1_y = face_y - random.randint(20, 50)
+        eye2_x = face_x + random.randint(20, 50)
+        eye2_y = face_y - random.randint(20, 50)
+        cv2.circle(avatar_canvas, (eye1_x, eye1_y), random.randint(5, 15), (0, 0, 0), -1)  # Left eye
+        cv2.circle(avatar_canvas, (eye2_x, eye2_y), random.randint(5, 15), (0, 0, 0), -1)  # Right eye
+
+        # Draw mouth with random position and size
+        mouth_x = face_x
+        mouth_y = face_y + random.randint(20, 50)
+        mouth_width = random.randint(20, 50)
+        mouth_height = random.randint(5, 15)
+        cv2.rectangle(avatar_canvas, (mouth_x - mouth_width//2, mouth_y), (mouth_x + mouth_width//2, mouth_y + mouth_height), (random.randint(0,255), random.randint(0,255), random.randint(0,255)), -1)
+
+        # Add crazy animations
+        if random.random() < 0.5:  # 50% chance of animation
+            # Randomly change the background color
+            avatar_canvas[:, :, :] = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+
+            # Randomly draw a hat
+            hat_x = face_x
+            hat_y = face_y - face_radius - random.randint(10, 50)
+            hat_width = random.randint(50, 100)
+            hat_height = random.randint(10, 50)
+            cv2.rectangle(avatar_canvas, (hat_x - hat_width//2, hat_y), (hat_x + hat_width//2, hat_y + hat_height), (random.randint(0,255), random.randint(0,255), random.randint(0,255)), -1)
+
+            # Randomly draw glasses
+            glass_x = face_x
+            glass_y = eye1_y + random.randint(10, 30)
+            glass_width = random.randint(50, 100)
+            glass_height = random.randint(5, 15)
+            cv2.rectangle(avatar_canvas, (glass_x - glass_width//2, glass_y), (glass_x + glass_width//2, glass_y + glass_height), (random.randint(0,255), random.randint(0,255), random.randint(0,255)), -1)
+
         # Add the current frame to the list of frames
         frame_path = f"frame_{i}.png"
-        cv2.imwrite(frame_path, frame)
+        cv2.imwrite(frame_path, avatar_canvas)
         frames.append(frame_path)
-    
+
     return frames
 
 # Function to generate TTS audio
@@ -73,32 +83,37 @@ def create_video(frames, audio_path, output_video_path="news_video.mp4"):
 # Main Streamlit function
 def main():
     st.title("Cool Animated Anchor")
-    st.markdown("### Type your news script below to generate an animated anchor!")
+    st.markdown("### Type your news script below:")
+    
+    # Input box for user to input script text
+    script_text = st.text_area("Enter Script Here:", "Welcome to the news channel. Here's today's update...")
 
-    # Input for news script
-    news_script = st.text_area("Type or Paste News Script Below:")
+    if st.button("Generate Animated Video"):
+        if script_text:
+            with st.spinner('Creating animated video...'):
+                # Generate animated avatar frames
+                frames = create_animated_avatar(script_text)
+                
+                # Generate audio for the script
+                audio_path = generate_audio(script_text)
 
-    # Generate video button
-    if st.button("Generate Video"):
-        if not news_script.strip():
-            st.warning("Please provide a valid script to generate the video!")
-            return
+                # Create video with the generated frames and audio
+                video_path = create_video(frames, audio_path)
+                
+                st.success("Video Created Successfully!")
 
-        # Generate frames for the avatar with animations
-        st.info("Generating avatar frames...")
-        frames = create_animated_anchor(news_script)
-        
-        # Generate audio from the script
-        st.info("Generating TTS audio...")
-        audio_path = generate_audio(news_script)
-        
-        # Create video from frames and audio
-        st.info("Creating video...")
-        video_path = create_video(frames, audio_path)
+                # Display video
+                video_file = open(video_path, "rb")
+                video_bytes = video_file.read()
+                st.video(video_bytes)
+                
+                # Clean up temporary files
+                for frame in frames:
+                    os.remove(frame)
+                os.remove(audio_path)
+                os.remove(video_path)
+        else:
+            st.error("Please enter a script text!")
 
-        st.success("Video created successfully!")
-        st.video(video_path)
-
-# Run the Streamlit app
 if __name__ == "__main__":
     main()
