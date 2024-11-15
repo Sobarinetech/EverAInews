@@ -4,16 +4,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from moviepy.editor import ImageSequenceClip, AudioFileClip
 from gtts import gTTS
+from PIL import Image
 
-# Function to create an avatar frame
-def draw_avatar(mouth_state="closed"):
+# Function to create an avatar frame using the uploaded image
+def draw_avatar_with_image(uploaded_image, mouth_state="closed"):
     fig, ax = plt.subplots(figsize=(4, 6))
-    
-    # Head
-    head = plt.Circle((0.5, 0.75), radius=0.3, color="peachpuff", zorder=1)
-    ax.add_patch(head)
 
-    # Eyes
+    # Head (Use uploaded image as the face)
+    img = Image.open(uploaded_image)
+    img = img.resize((200, 200))
+    img_path = "temp_face_image.png"
+    img.save(img_path)
+    
+    face_image = plt.imread(img_path)
+    ax.imshow(face_image, extent=[0.25, 0.75, 0.55, 1.1], zorder=1)
+
+    # Eyes (Fixed position for simplicity, modify as needed)
     left_eye = plt.Circle((0.35, 0.85), radius=0.05, color="white", zorder=2)
     right_eye = plt.Circle((0.65, 0.85), radius=0.05, color="white", zorder=2)
     ax.add_patch(left_eye)
@@ -21,7 +27,7 @@ def draw_avatar(mouth_state="closed"):
 
     # Pupils
     left_pupil = plt.Circle((0.35, 0.85), radius=0.02, color="black", zorder=3)
-    right_pupil = plt.Circle((0.65, 0.85), radius=0.02, color="black", zorder=3)
+    right_pupil = plt.Circle((0.65, 0.0), radius=0.02, color="black", zorder=3)
     ax.add_patch(left_pupil)
     ax.add_patch(right_pupil)
 
@@ -52,11 +58,11 @@ def draw_avatar(mouth_state="closed"):
     return img_path
 
 # Function to generate frames for video
-def generate_frames(script_text):
+def generate_frames(script_text, uploaded_image):
     frames = []
     for i, char in enumerate(script_text):
         mouth_state = "open" if i % 2 == 0 else "closed"
-        frame_path = draw_avatar(mouth_state)
+        frame_path = draw_avatar_with_image(uploaded_image, mouth_state)
         frames.append(frame_path)
     return frames
 
@@ -86,9 +92,8 @@ def main():
     uploaded_image = st.file_uploader("Upload an Image", type=["jpg", "jpeg", "png"])
     
     if uploaded_image is not None:
-        # Read and display uploaded image
-        image = np.array(bytearray(uploaded_image.read()), dtype=np.uint8)
-        img = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        # Display uploaded image
+        img = Image.open(uploaded_image)
         st.image(img, caption="Uploaded Image", use_column_width=True)
 
         # Input for news script
@@ -102,7 +107,7 @@ def main():
 
             # Generate frames
             st.info("Generating avatar frames...")
-            frames = generate_frames(news_script)
+            frames = generate_frames(news_script, uploaded_image)
             
             # Generate audio
             st.info("Generating TTS audio...")
