@@ -1,10 +1,10 @@
 import streamlit as st
-import pyttsx3
-import textwrap
 from PIL import Image, ImageDraw, ImageFont
-import moviepy.editor as mp
-import os
 import tempfile
+import os
+import textwrap
+from gtts import gTTS
+import moviepy.editor as mp
 
 # Function to create the video from the text
 def create_video_with_audio(script, avatar_image_path):
@@ -19,17 +19,15 @@ def create_video_with_audio(script, avatar_image_path):
 
     return video_file
 
-# Function to generate audio from the text using pyttsx3
+# Function to generate audio from the text using gTTS
 def generate_audio(script):
-    engine = pyttsx3.init()
-    audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    audio_path = audio_file.name
+    audio_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
 
-    # Save speech to audio file
-    engine.save_to_file(script, audio_path)
-    engine.runAndWait()
+    # Using gTTS to convert text to speech
+    tts = gTTS(text=script, lang='en')
+    tts.save(audio_file_path)
 
-    return audio_path
+    return audio_file_path
 
 # Function to add subtitles to video frames
 def add_subtitles_to_frames(script, avatar_image_path):
