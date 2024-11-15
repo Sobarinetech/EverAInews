@@ -1,37 +1,15 @@
 import os
 import textwrap
-import wave
-import pyaudio
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 import moviepy.editor as mp
+from gtts import gTTS  # Using gTTS for text-to-speech
 
 
-# Function to create speech using pyaudio and wave
-def text_to_speech(script, audio_file='output_audio.wav'):
-    # Set parameters for audio file
-    sample_rate = 44100
-    volume = 1.0
-    channels = 1
-    frame_rate = 256
-
-    # Initialize text-to-speech engine (pyaudio)
-    p = pyaudio.PyAudio()
-
-    # Open stream
-    stream = p.open(format=pyaudio.paInt16, channels=channels, rate=sample_rate, output=True)
-
-    # Prepare text as audio output (mock implementation, replace with actual TTS model)
-    with wave.open(audio_file, 'wb') as wf:
-        wf.setnchannels(channels)
-        wf.setsampwidth(2)  # 2 bytes per sample
-        wf.setframerate(sample_rate)
-        wf.writeframes(b'\0' * int(sample_rate * 2 * len(script.split())))
-
-    # Close stream
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+# Function to create speech using gTTS and save to audio file
+def text_to_speech(script, audio_file='output_audio.mp3'):
+    tts = gTTS(script, lang='en')
+    tts.save(audio_file)  # Save the generated speech to an audio file
 
 
 # Function to create image frames with text
@@ -69,7 +47,7 @@ def add_subtitles_to_frames(script):
 
 
 # Function to create video with audio and subtitles
-def create_video_with_audio(script, audio_file='output_audio.wav', output_video='output_video.mp4'):
+def create_video_with_audio(script, audio_file='output_audio.mp3', output_video='output_video.mp4'):
     # Generate the audio file from the script
     text_to_speech(script, audio_file)
     
@@ -104,7 +82,7 @@ def run_streamlit_app():
             st.write("Generating video...")
 
             # Path to save the audio and video
-            audio_file = "output_audio.wav"
+            audio_file = "output_audio.mp3"
             video_file = "output_video.mp4"
             
             # Create video with audio from script
