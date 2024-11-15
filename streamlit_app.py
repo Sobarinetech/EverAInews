@@ -30,14 +30,7 @@ def extract_text(pdf_file):
 def play_news(news_text):
     tts = gTTS(text=news_text, lang='en')
     tts.save('news.mp3')
-
-    pygame.mixer.pre_init(44100, -16, 2, 2048)  
-    pygame.mixer.init()
-    pygame.mixer.music.load('news.mp3')
-    pygame.mixer.music.play()
-
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
+    st.audio('news.mp3')  # Streamlit audio component
 
 def show_slideshow(slides):
     slide_index = 0
