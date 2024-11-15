@@ -2,10 +2,12 @@ import os
 import textwrap
 import wave
 import pyaudio
+import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 import moviepy.editor as mp
 
-# Create speech using pyaudio and wave
+
+# Function to create speech using pyaudio and wave
 def text_to_speech(script, audio_file='output_audio.wav'):
     # Set parameters for audio file
     sample_rate = 44100
@@ -20,9 +22,6 @@ def text_to_speech(script, audio_file='output_audio.wav'):
     stream = p.open(format=pyaudio.paInt16, channels=channels, rate=sample_rate, output=True)
 
     # Prepare text as audio output (mock implementation, replace with actual TTS model)
-    # In this implementation, we are skipping actual text-to-speech, and we assume the script is being synthesized as an audio file.
-
-    # Save a basic silent audio file for testing
     with wave.open(audio_file, 'wb') as wf:
         wf.setnchannels(channels)
         wf.setsampwidth(2)  # 2 bytes per sample
@@ -33,6 +32,7 @@ def text_to_speech(script, audio_file='output_audio.wav'):
     stream.stop_stream()
     stream.close()
     p.terminate()
+
 
 # Function to create image frames with text
 def create_image_from_text(text, frame_num):
@@ -57,6 +57,7 @@ def create_image_from_text(text, frame_num):
     # Save the image frame
     img.save(f"frame_{frame_num}.png")
 
+
 # Function to add subtitles to frames
 def add_subtitles_to_frames(script):
     frames = []
@@ -65,6 +66,7 @@ def add_subtitles_to_frames(script):
         frames.append(f"frame_{i}.png")
     
     return frames
+
 
 # Function to create video with audio and subtitles
 def create_video_with_audio(script, audio_file='output_audio.wav', output_video='output_video.mp4'):
@@ -89,12 +91,29 @@ def create_video_with_audio(script, audio_file='output_audio.wav', output_video=
     for frame in frames:
         os.remove(frame)
 
-# Example script (you can replace this with your own script)
-script = """
-Welcome to the video!
-This is an example script.
-Enjoy the video and have fun.
-"""
 
-# Create video from the script
-create_video_with_audio(script)
+# Streamlit UI
+def run_streamlit_app():
+    st.title("Text to Video Generator")
+    
+    # Upload your script text
+    script = st.text_area("Enter your script text", "Welcome to the video!\nThis is an example script.")
+    
+    if st.button("Generate Video"):
+        if script:
+            st.write("Generating video...")
+
+            # Path to save the audio and video
+            audio_file = "output_audio.wav"
+            video_file = "output_video.mp4"
+            
+            # Create video with audio from script
+            create_video_with_audio(script, audio_file, video_file)
+            
+            st.write("Video generated successfully!")
+            st.video(video_file)
+        else:
+            st.warning("Please enter a script text first.")
+
+if __name__ == "__main__":
+    run_streamlit_app()
