@@ -1,34 +1,29 @@
 import os
-import random
 import textwrap
-from gtts import gTTS  # Google Text-to-Speech (no external dependencies needed)
-from moviepy.editor import ImageSequenceClip, concatenate_videoclips, TextClip
+import pyttsx3
 from PIL import Image, ImageDraw, ImageFont
+import moviepy.editor as mp
+import numpy as np
 
-# Path where you want to store images and video
-output_path = './output/'
-os.makedirs(output_path, exist_ok=True)
+# Initialize pyttsx3
+engine = pyttsx3.init()
 
-def text_to_speech(script, audio_file_path):
-    """
-    Convert text to speech and save it as an audio file.
-    """
-    tts = gTTS(text=script, lang='en')
-    tts.save(audio_file_path)
+# Function to convert text to speech
+def text_to_speech(script, audio_file='output_audio.mp3'):
+    engine.save_to_file(script, audio_file)
+    engine.runAndWait()
 
-def create_image_from_text(text, frame_num, font_path=None):
-    """
-    Create an image with the given text overlay for each video frame.
-    """
+# Function to create image frames with text
+def create_image_from_text(text, frame_num):
     width, height = 800, 600  # Set the size of the image
     img = Image.new('RGB', (width, height), color=(255, 255, 255))  # Create a blank white image
     draw = ImageDraw.Draw(img)
     
-    # Load a font or use default if not specified
+    # Load a default font (no need for paths or custom fonts)
     try:
-        font = ImageFont.truetype(font_path, 24)
+        font = ImageFont.load_default()  # Use the default font available in PIL
     except IOError:
-        font = ImageFont.load_default()  # Use default font if custom one is unavailable
+        font = ImageFont.load_default()  # Fallback to default font if not available
     
     # Wrap the text to fit within the image width
     wrapped_text = textwrap.fill(text, width=60)
@@ -39,39 +34,46 @@ def create_image_from_text(text, frame_num, font_path=None):
     draw.text(text_position, wrapped_text, fill="black", font=font)
     
     # Save the image frame
-    img.save(os.path.join(output_path, f"frame_{frame_num}.png"))
+    img.save(f"frame_{frame_num}.png")
 
-def generate_video_from_frames(script, frame_rate=1, video_output="final_video.mp4"):
-    """
-    Generate a video from the list of images with subtitles from the script.
-    """
-    # Create frames from the script
+# Function to add subtitles to frames
+def add_subtitles_to_frames(script):
     frames = []
-    for i, word in enumerate(script.split()):
-        frame_text = ' '.join(script.split()[:i + 1])  # Show incremental text
-        create_image_from_text(frame_text, i)
-        frames.append(os.path.join(output_path, f"frame_{i}.png"))
+    for i, line in enumerate(script.splitlines()):
+        create_image_from_text(line, i)
+        frames.append(f"frame_{i}.png")
+    
+    return frames
 
-    # Create the video using the frames
-    clip = ImageSequenceClip(frames, fps=frame_rate)
-    clip.write_videofile(video_output, codec="libx264")
+# Function to create video with audio and subtitles
+def create_video_with_audio(script, audio_file='output_audio.mp3', output_video='output_video.mp4'):
+    # Generate the audio file from the script
+    text_to_speech(script, audio_file)
+    
+    # Create frames for the video with subtitles
+    frames = add_subtitles_to_frames(script)
+    
+    # Create video clip from frames
+    clips = [mp.ImageClip(frame).set_duration(2) for frame in frames]
+    video = mp.concatenate_videoclips(clips, method="compose")
+    
+    # Add audio to the video
+    audio = mp.AudioFileClip(audio_file)
+    video = video.set_audio(audio)
+    
+    # Write the final video to a file
+    video.write_videofile(output_video, fps=24)
 
-    # Optionally, clean up frame images
+    # Clean up the frame images
     for frame in frames:
         os.remove(frame)
 
-def main():
-    # Example script to use
-    script = "This is an example script for generating a video with text-to-speech narration."
-    
-    # Step 1: Convert the script to speech
-    audio_file_path = os.path.join(output_path, 'output_audio.mp3')
-    text_to_speech(script, audio_file_path)
+# Example script (you can replace this with your own script)
+script = """
+Welcome to the video!
+This is an example script.
+Enjoy the video and have fun.
+"""
 
-    # Step 2: Generate video from the script
-    generate_video_from_frames(script, frame_rate=1)
-
-    print(f"Video and audio have been generated successfully: {audio_file_path}")
-
-if __name__ == '__main__':
-    main()
+# Create video from the script
+create_video_with_audio(script)
