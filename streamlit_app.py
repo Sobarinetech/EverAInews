@@ -5,9 +5,9 @@ from gtts import gTTS
 import pygame
 import os
 import cv2
-import dlib
 import numpy as np
 import librosa
+import dlib
 
 def select_pdf():
     st.markdown("## Upload News PDF")
@@ -37,9 +37,8 @@ def play_news(news_text):
     st.audio('news.mp3')
 
 def animate_mouth(avatar_img, audio_file):
-    cap = cv2.VideoCapture('output.mp4')  # Output video
+    cap = cv2.VideoCapture('output.mp4')
     audio, sr = librosa.load(audio_file)
-
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
