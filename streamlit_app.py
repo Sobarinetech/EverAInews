@@ -1,59 +1,16 @@
-import streamlit as st
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse, Rectangle
-from moviepy.editor import ImageSequenceClip, CompositeVideoClip, VideoClip
-from PIL import Image, ImageDraw, ImageFont
 import os
+from PIL import Image, ImageDraw, ImageFont
+from moviepy.editor import ImageSequenceClip
+import pyttsx3
+import tempfile
 
-# Function to draw an avatar frame
-def draw_avatar(mouth_state="closed", eye_state="open"):
-    fig, ax = plt.subplots(figsize=(4, 6))
-    
-    # Head
-    ax.add_patch(Ellipse((0.5, 0.75), width=0.6, height=0.8, color="peachpuff"))
-    
-    # Eyes
-    eye_y = 0.85
-    if eye_state == "closed":
-        ax.plot([0.35, 0.45], [eye_y, eye_y], color="black", lw=2)
-        ax.plot([0.55, 0.65], [eye_y, eye_y], color="black", lw=2)
-    else:
-        ax.add_patch(Ellipse((0.35, 0.85), width=0.1, height=0.2, color="white"))
-        ax.add_patch(Ellipse((0.65, 0.85), width=0.1, height=0.2, color="white"))
-        ax.add_patch(Ellipse((0.35, 0.85), width=0.05, height=0.1, color="black"))
-        ax.add_patch(Ellipse((0.65, 0.85), width=0.05, height=0.1, color="black"))
-    
-    # Mouth
-    if mouth_state == "open":
-        ax.add_patch(Ellipse((0.5, 0.6), width=0.3, height=0.1, color="red"))
-    else:
-        ax.add_patch(Rectangle((0.35, 0.58), 0.3, 0.05, color="red"))
-    
-    # Body
-    ax.add_patch(Rectangle((0.25, 0.1), 0.5, 0.5, color="navy"))
-    
-    # Adjust plot
-    ax.axis("off")
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1.5)
-    plt.close(fig)
-    
-    # Save the frame image
-    img_path = f"frame_{mouth_state}_{eye_state}.png"
-    fig.savefig(img_path, dpi=100)
-    return img_path
+# Function to convert text to speech and save as audio file
+def text_to_speech(script, audio_file_path):
+    engine = pyttsx3.init()
+    engine.save_to_file(script, audio_file_path)
+    engine.runAndWait()
 
-# Function to generate avatar frames
-def generate_frames(script):
-    frames = []
-    for i, char in enumerate(script):
-        mouth_state = "open" if i % 2 == 0 else "closed"
-        eye_state = "open" if i % 5 != 0 else "closed"
-        frame_path = draw_avatar(mouth_state, eye_state)
-        frames.append(frame_path)
-    return frames
-
-# Function to overlay subtitles on frames
+# Function to add subtitles on frames
 def add_subtitles_to_frames(frames, script):
     subtitle_frames = []
     font_size = 24
@@ -61,63 +18,60 @@ def add_subtitles_to_frames(frames, script):
         font = ImageFont.truetype("arial.ttf", font_size)
     except IOError:
         font = ImageFont.load_default()
-    
+
     for i, frame_path in enumerate(frames):
         img = Image.open(frame_path)
         draw = ImageDraw.Draw(img)
         text = script[:i + 1]  # Show incremental text
-        w, h = draw.textsize(text, font=font)
+        w, h = font.getsize(text)  # Calculate text width and height
+        
+        # Draw background for subtitle and the text itself
         draw.rectangle([0, img.height - 40, img.width, img.height], fill="black")
         draw.text(((img.width - w) // 2, img.height - 35), text, fill="white", font=font)
         
         subtitle_frame_path = f"subtitle_frame_{i}.png"
         img.save(subtitle_frame_path)
         subtitle_frames.append(subtitle_frame_path)
+    
     return subtitle_frames
 
-# Function to create a video
-def create_video(frames, output_video="news_video.mp4", fps=10):
+# Function to generate video from frames
+def generate_video_from_frames(frames, video_file_path, fps=24):
     clip = ImageSequenceClip(frames, fps=fps)
-    clip.write_videofile(output_video, codec="libx264")
-    return output_video
+    clip.write_videofile(video_file_path, codec="libx264")
 
-# Main function for Streamlit app
-def main():
-    st.title("Avatar News Video Generator")
-    st.write("Create a dynamic news avatar video with subtitles.")
+# Main function to generate video with text-to-speech and subtitles
+def create_video_with_script(script, video_file_path):
+    # Step 1: Create temporary directory to store frames
+    temp_dir = tempfile.mkdtemp()
 
-    # Input: News script
-    script = st.text_area("Enter the news script here:", "")
-    
-    # Input: FPS slider
-    fps = st.slider("Frames per second (FPS):", 5, 30, 10)
+    # Step 2: Convert script to audio and save
+    audio_file_path = os.path.join(temp_dir, "output_audio.mp3")
+    text_to_speech(script, audio_file_path)
 
-    # Generate video button
-    if st.button("Generate Video"):
-        if not script.strip():
-            st.warning("Please enter a valid script.")
-            return
-        
-        # Generate avatar frames
-        st.info("Generating avatar frames...")
-        frames = generate_frames(script)
+    # Step 3: Generate frames for video (for simplicity, use a static image as a placeholder)
+    frames = []
+    for i in range(len(script)):
+        # Create a placeholder image for each frame (this could be any image)
+        img = Image.new('RGB', (640, 480), color='blue')
+        frames.append(os.path.join(temp_dir, f"frame_{i}.png"))
+        img.save(frames[i])
 
-        # Add subtitles to frames
-        st.info("Adding subtitles...")
-        subtitle_frames = add_subtitles_to_frames(frames, script)
+    # Step 4: Add subtitles to the frames
+    subtitle_frames = add_subtitles_to_frames(frames, script)
 
-        # Create video
-        st.info("Creating video...")
-        video_path = create_video(subtitle_frames, fps=fps)
+    # Step 5: Generate the video from the subtitle frames
+    generate_video_from_frames(subtitle_frames, video_file_path)
 
-        # Display video
-        st.success("Video generated successfully!")
-        st.video(video_path)
+    # Clean up temporary files
+    for frame in subtitle_frames:
+        os.remove(frame)
+    for frame in frames:
+        os.remove(frame)
 
-        # Cleanup: Remove generated frame images
-        for frame in frames + subtitle_frames:
-            os.remove(frame)
+    print(f"Video saved to {video_file_path}")
 
-# Run the Streamlit app
-if __name__ == "__main__":
-    main()
+# Example usage:
+script = "This is an example script for the video. It will generate text-to-speech and subtitles for each frame."
+video_file_path = "final_video.mp4"
+create_video_with_script(script, video_file_path)
