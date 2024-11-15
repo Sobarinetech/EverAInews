@@ -7,3 +7,4 @@ opencv-python
 librosa
 matplotlib
 moviepy
+pyttsx3
