@@ -1,16 +1,17 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse, Rectangle
-from moviepy.editor import ImageSequenceClip, TextClip, CompositeVideoClip
-import pyttsx3
+from moviepy.editor import ImageSequenceClip, CompositeVideoClip, VideoClip
+from PIL import Image, ImageDraw, ImageFont
 import os
-import random
 
-# Function to draw a simple avatar frame
-def draw_avatar(mouth_state="closed", eye_state="open", hair_color="black", clothes_color="blue"):
+# Function to draw an avatar frame
+def draw_avatar(mouth_state="closed", eye_state="open"):
     fig, ax = plt.subplots(figsize=(4, 6))
+    
     # Head
     ax.add_patch(Ellipse((0.5, 0.75), width=0.6, height=0.8, color="peachpuff"))
+    
     # Eyes
     eye_y = 0.85
     if eye_state == "closed":
@@ -21,69 +22,102 @@ def draw_avatar(mouth_state="closed", eye_state="open", hair_color="black", clot
         ax.add_patch(Ellipse((0.65, 0.85), width=0.1, height=0.2, color="white"))
         ax.add_patch(Ellipse((0.35, 0.85), width=0.05, height=0.1, color="black"))
         ax.add_patch(Ellipse((0.65, 0.85), width=0.05, height=0.1, color="black"))
+    
     # Mouth
     if mouth_state == "open":
         ax.add_patch(Ellipse((0.5, 0.6), width=0.3, height=0.1, color="red"))
     else:
         ax.add_patch(Rectangle((0.35, 0.58), 0.3, 0.05, color="red"))
-    # Hair
-    ax.add_patch(Rectangle((0.25, 0.9), 0.5, 0.2, color=hair_color))
-    # Clothes
-    ax.add_patch(Rectangle((0.25, 0.1), 0.5, 0.5, color=clothes_color))
+    
+    # Body
+    ax.add_patch(Rectangle((0.25, 0.1), 0.5, 0.5, color="navy"))
+    
     # Adjust plot
     ax.axis("off")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1.5)
     plt.close(fig)
-    img_path = f"frame_{mouth_state}_{eye_state}_{hair_color}_{clothes_color}.png"
+    
+    # Save the frame image
+    img_path = f"frame_{mouth_state}_{eye_state}.png"
     fig.savefig(img_path, dpi=100)
     return img_path
 
-# Generate frames based on the script
-def generate_frames(script, hair_color, clothes_color):
+# Function to generate avatar frames
+def generate_frames(script):
     frames = []
     for i, char in enumerate(script):
         mouth_state = "open" if i % 2 == 0 else "closed"
         eye_state = "open" if i % 5 != 0 else "closed"
-        frame_path = draw_avatar(mouth_state, eye_state, hair_color, clothes_color)
+        frame_path = draw_avatar(mouth_state, eye_state)
         frames.append(frame_path)
     return frames
 
-# Generate audio using pyttsx3
-def generate_audio(script, audio_path="news_audio.mp3"):
-    engine = pyttsx3.init()
-    engine.save_to_file(script, audio_path)
-    engine.runAndWait()
-    return audio_path
+# Function to overlay subtitles on frames
+def add_subtitles_to_frames(frames, script):
+    subtitle_frames = []
+    font_size = 24
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)
+    except IOError:
+        font = ImageFont.load_default()
+    
+    for i, frame_path in enumerate(frames):
+        img = Image.open(frame_path)
+        draw = ImageDraw.Draw(img)
+        text = script[:i + 1]  # Show incremental text
+        w, h = draw.textsize(text, font=font)
+        draw.rectangle([0, img.height - 40, img.width, img.height], fill="black")
+        draw.text(((img.width - w) // 2, img.height - 35), text, fill="white", font=font)
+        
+        subtitle_frame_path = f"subtitle_frame_{i}.png"
+        img.save(subtitle_frame_path)
+        subtitle_frames.append(subtitle_frame_path)
+    return subtitle_frames
 
-# Create video with subtitles
-def create_video(frames, audio_path, script, output_video="news_video.mp4", fps=10):
+# Function to create a video
+def create_video(frames, output_video="news_video.mp4", fps=10):
     clip = ImageSequenceClip(frames, fps=fps)
-    text_clip = TextClip(script, fontsize=24, color="white", bg_color="black", size=(800, 100)).set_duration(clip.duration)
-    video = CompositeVideoClip([clip, text_clip.set_position(("center", "bottom"))])
-    video.write_videofile(output_video, codec="libx264", audio_codec="aac")
+    clip.write_videofile(output_video, codec="libx264")
     return output_video
 
-# Streamlit app main function
+# Main function for Streamlit app
 def main():
-    st.title("News Avatar Video Generator")
-    st.write("Generate a dynamic news avatar video with audio narration.")
-    
-    # Input script
+    st.title("Avatar News Video Generator")
+    st.write("Create a dynamic news avatar video with subtitles.")
+
+    # Input: News script
     script = st.text_area("Enter the news script here:", "")
-    fps = st.slider("Frames per second (FPS):", 5, 30, 10)
-    hair_color = st.color_picker("Select hair color")
-    clothes_color = st.color_picker("Select clothes color")
     
+    # Input: FPS slider
+    fps = st.slider("Frames per second (FPS):", 5, 30, 10)
+
     # Generate video button
     if st.button("Generate Video"):
         if not script.strip():
             st.warning("Please enter a valid script.")
             return
         
-        # Generate frames
-        st.info("Generating frames...")
-        frames = generate_frames(script, hair_color, clothes_color)
-        
-        # Generate audio
-        st.info("Generating audio
+        # Generate avatar frames
+        st.info("Generating avatar frames...")
+        frames = generate_frames(script)
+
+        # Add subtitles to frames
+        st.info("Adding subtitles...")
+        subtitle_frames = add_subtitles_to_frames(frames, script)
+
+        # Create video
+        st.info("Creating video...")
+        video_path = create_video(subtitle_frames, fps=fps)
+
+        # Display video
+        st.success("Video generated successfully!")
+        st.video(video_path)
+
+        # Cleanup: Remove generated frame images
+        for frame in frames + subtitle_frames:
+            os.remove(frame)
+
+# Run the Streamlit app
+if __name__ == "__main__":
+    main()
