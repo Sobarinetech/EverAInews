@@ -4,5 +4,4 @@ Pillow
 gTTS
 pygame
 opencv-python
-dlib
 librosa
