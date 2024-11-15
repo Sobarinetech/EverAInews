@@ -8,51 +8,60 @@ from moviepy.editor import ImageSequenceClip, AudioFileClip
 from PIL import Image
 import time
 
-# Function to create a cool cartoon avatar with basic animations
+# Function to create a refined and realistic cartoon avatar with animations
 def create_animated_avatar(script_text):
     frames = []
     for i in range(len(script_text)):
         avatar_canvas = np.ones((500, 500, 3), dtype=np.uint8) * 255  # White background canvas
 
-        # Draw face with random position and size
+        # Draw a more refined face with shading
         face_x = random.randint(150, 350)
         face_y = random.randint(100, 300)
-        face_radius = random.randint(50, 150)
-        cv2.circle(avatar_canvas, (face_x, face_y), face_radius, (random.randint(0,255), random.randint(0,255), random.randint(0,255)), -1)  # Face
-
-        # Draw eyes with random position and size
-        eye1_x = face_x - random.randint(20, 50)
-        eye1_y = face_y - random.randint(20, 50)
-        eye2_x = face_x + random.randint(20, 50)
-        eye2_y = face_y - random.randint(20, 50)
-        cv2.circle(avatar_canvas, (eye1_x, eye1_y), random.randint(5, 15), (0, 0, 0), -1)  # Left eye
-        cv2.circle(avatar_canvas, (eye2_x, eye2_y), random.randint(5, 15), (0, 0, 0), -1)  # Right eye
-
-        # Draw mouth with random position and size
+        face_radius = random.randint(60, 120)
+        
+        # Create a subtle gradient for the face
+        for r in range(face_radius):
+            color_intensity = int(255 - (r / face_radius) * 100)
+            cv2.circle(avatar_canvas, (face_x, face_y), r, (color_intensity, color_intensity, 255), -1)
+        
+        # Draw more realistic eyes (elliptical shape)
+        eye1_x = face_x - random.randint(30, 50)
+        eye1_y = face_y - random.randint(10, 20)
+        eye2_x = face_x + random.randint(30, 50)
+        eye2_y = face_y - random.randint(10, 20)
+        cv2.ellipse(avatar_canvas, (eye1_x, eye1_y), (15, 10), 0, 0, 360, (0, 0, 0), -1)  # Left eye
+        cv2.ellipse(avatar_canvas, (eye2_x, eye2_y), (15, 10), 0, 0, 360, (0, 0, 0), -1)  # Right eye
+        
+        # Add pupils (smaller circles)
+        pupil_size = random.randint(5, 10)
+        cv2.circle(avatar_canvas, (eye1_x, eye1_y), pupil_size, (255, 255, 255), -1)  # Left pupil
+        cv2.circle(avatar_canvas, (eye2_x, eye2_y), pupil_size, (255, 255, 255), -1)  # Right pupil
+        
+        # Draw a smoother, more realistic mouth (curved line)
         mouth_x = face_x
-        mouth_y = face_y + random.randint(20, 50)
-        mouth_width = random.randint(20, 50)
-        mouth_height = random.randint(5, 15)
-        cv2.rectangle(avatar_canvas, (mouth_x - mouth_width//2, mouth_y), (mouth_x + mouth_width//2, mouth_y + mouth_height), (random.randint(0,255), random.randint(0,255), random.randint(0,255)), -1)
+        mouth_y = face_y + random.randint(30, 50)
+        mouth_width = random.randint(30, 60)
+        mouth_height = random.randint(8, 15)
+        cv2.ellipse(avatar_canvas, (mouth_x, mouth_y), (mouth_width, mouth_height), 0, 0, 180, (random.randint(0, 100), random.randint(0, 100), random.randint(100, 255)), -1)
 
-        # Add crazy animations
+        # Add subtle animations
         if random.random() < 0.5:  # 50% chance of animation
-            # Randomly change the background color
-            avatar_canvas[:, :, :] = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+            # Smoothly animate the avatar's background color
+            avatar_canvas[:, :, :] = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
-            # Randomly draw a hat
+            # Randomly add accessories like a hat with shading and smooth edges
             hat_x = face_x
-            hat_y = face_y - face_radius - random.randint(10, 50)
-            hat_width = random.randint(50, 100)
-            hat_height = random.randint(10, 50)
-            cv2.rectangle(avatar_canvas, (hat_x - hat_width//2, hat_y), (hat_x + hat_width//2, hat_y + hat_height), (random.randint(0,255), random.randint(0,255), random.randint(0,255)), -1)
+            hat_y = face_y - face_radius - random.randint(10, 30)
+            hat_width = random.randint(60, 120)
+            hat_height = random.randint(20, 50)
+            cv2.ellipse(avatar_canvas, (hat_x, hat_y), (hat_width, hat_height), 0, 0, 360, (random.randint(100, 200), random.randint(0, 100), random.randint(0, 255)), -1)
 
-            # Randomly draw glasses
+            # Randomly add glasses with a smooth shape and gradients
             glass_x = face_x
-            glass_y = eye1_y + random.randint(10, 30)
-            glass_width = random.randint(50, 100)
-            glass_height = random.randint(5, 15)
-            cv2.rectangle(avatar_canvas, (glass_x - glass_width//2, glass_y), (glass_x + glass_width//2, glass_y + glass_height), (random.randint(0,255), random.randint(0,255), random.randint(0,255)), -1)
+            glass_y = face_y - random.randint(20, 40)
+            glass_width = random.randint(40, 80)
+            glass_height = random.randint(10, 20)
+            cv2.ellipse(avatar_canvas, (glass_x, glass_y), (glass_width, glass_height), 0, 0, 360, (random.randint(0, 50), random.randint(0, 100), random.randint(0, 150)), -1)
 
         # Add the current frame to the list of frames
         frame_path = f"frame_{i}.png"
